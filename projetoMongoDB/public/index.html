@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplicativo Mongo</title>
+</head>
+<body>
+    <div class="container">
+        <h1> Gerenciar dados</h1>
+        <div class="form-container">
+            <h2>Adicionar e editar</h2>
+            <form id="itemForm">
+                <input type="hidden" id="itemID">
+                <div>
+                    <label for="itemNome">Nome:</label>
+                    <input id="itemNome" type="text" required>
+                </div>
+                <div>
+                    <label for="itemDescricao">
+                        <input id="itemDescricao" type="text" required>
+                    </label>
+                </div>
+                <input type="submit" id="submitBotao" value="Adicionar">
+            </form>
+        </div>
+        <div class="lista-container">
+            <h2>Dados cadastrados</h2>
+            <ul id="itemsLista">
+
+            </ul>
+        </div>
+
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
