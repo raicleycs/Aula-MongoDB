@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formulario = document.querySelector('#itemForm');
     const itemId = document.getElementById('itemID');
     const itemNome = document.getElementById('itemNome');
-    const descricao = document.getElementById('itemDescricao');
+    const itemDescricao = document.getElementById('itemDescricao');
     const botao = document.getElementById('submitBotao');
     const lista = document.getElementById('itemsLista');
 
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderizarDados() {
         try {
             const resposta = await fetch(API_URL);
-            if(!resposta.ok){
+            if (!resposta.ok) {
                 throw new Error(`Erro: ${resposta.status}`);
             }
             const items = await resposta.json();
@@ -32,20 +32,20 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             items.forEach(item => {
                 const li = document.createElement('li');
-                li.dataset.id = item.id;
+                li.dataset.id = item._id;
                 const content = document.createElement('div');
                 content.classList.add('items');
-                content.innerHTML = `<strong>${item.nome}</strong>${item.descricao} ? '<p>${item.descricao}</p>' :'' `;
+                content.innerHTML = `<strong>${item.nome}</strong> ${item.descricao ? `<p class="descricao">${item.descricao}</p>` : ''}`;
                 const acaoDiv = document.createElement('div');
                 acaoDiv.classList.add('acao');
                 const botaoEditar = document.createElement('button');
                 botaoEditar.textContent = 'Editar';
                 botaoEditar.classList.add('edit-btn');
-                botaoEditar.addEventListener('click', () => editarItem(item._id));
+                botaoEditar.addEventListener('click', () => editarItem(item));
                 const botaoExcluir = document.createElement('button');
                 botaoExcluir.textContent = 'Excluir';
                 botaoExcluir.classList.add('excluir-btn');
-                botaoExcluir.addEventListener('click', () => excluirItem(item._id));
+                botaoExcluir.addEventListener('click', () => excluirItem(item));
                 acaoDiv.appendChild(botaoEditar);
                 acaoDiv.appendChild(botaoExcluir);
                 li.appendChild(content);
@@ -59,21 +59,30 @@ document.addEventListener('DOMContentLoaded', () => {
         editarId = item._id;
         itemId.value = item._id;
         itemNome.value = item.nome;
-        descricao.value = item.descricao;
+        itemDescricao.value = item.descricao;
         botao.textContent = 'Salvar alteração';
         window.scrollTo(0, 0);
+    }
+    function resetarFormulario() {
+        formulario.reset();
+        editandoId = null;
+        itemIdInput.value = ''; 
+        botao.textContent = 'Adicionar';
+        itemNomeInput.focus();
     }
 
     formulario.addEventListener('submit', async function (event) {
         event.preventDefault();
 
         const nome = itemNome.value.trim();
-        const itemDescricao = descricao.value.trim();
+        const desc = itemDescricao.value.trim();
+
         if (!nome) {
             alert('Nome obrigatorio');
             return;
         }
-        const itemData = { nome, itemDescricao };
+        const itemData = { nome, descricao: desc };
+
 
         let url = API_URL;
         let metodo = 'POST';
@@ -94,10 +103,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!resposta.ok) {
-                const erro = await resposta.json;
+                const erro = await resposta.json();
                 throw new Error(erro.message || `Erro ao salvar: ${resposta.status}`);
             }
-
+            resetarFormulario();
             await renderizarDados();
 
         } catch (error) {
@@ -111,20 +120,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const reposta = await fetch(`${API_URL}/${id}`, {
+            const resposta = await fetch(`${API_URL}/${id}`, {
                 method: 'DELETE',
             });
 
-            if (!reposta.ok) {
+            if (!resposta.ok) {
                 const erro = await reposta.json();
-                throw new Error(erro.message || `Erro ao deletar: ${reposta.status}`);
+                throw new Error(erro.message || `Erro ao deletar: ${resposta.status}`);
             }
-             await renderizarDados();
-        }catch(error){
+            await renderizarDados();
+        } catch (error) {
             console.error('Erro ao excluir os dados', error);
         }
 
     }
 
-renderizarDados() 
+    renderizarDados()
 });

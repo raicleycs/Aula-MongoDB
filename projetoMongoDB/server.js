@@ -21,9 +21,9 @@ async function run() {
         await client.connect();
 
         db = client.db(nomeBanco);
-        console.log('Conectado com sucesso!');
 
-    } catch (error) {
+    } catch(erro){
+
     }
 }
 app.use(cors());
@@ -45,7 +45,8 @@ app.post('/api/items', verificarConexao, async (req, res) => {
         if (!nome) {
             return res.status(400).json({ message: 'O campo nome não foi preenchido' });
         }
-        const novoItem = { nome, descricao: descricao || '', createdAt: new Date() };
+        const novoItem = { nome, descricao, createdAt: new Date() };
+        console.log(novoItem);
         const resultado = await db.collection(nomeColecao).insertOne(novoItem);
         const inserirItem = await db.collection(nomeColecao).findOne({ _id: resultado.insertedId });
         res.status(201).json(inserirItem);
