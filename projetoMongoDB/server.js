@@ -1,123 +1,132 @@
-const express = require('express');
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const uri = "mongodb+srv://usuarioTeste:Teste123@cluster0.wl8ayaf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-const cors = require('cors');
-const app = express();
-const port = process.env.PORT || 3000;
-const nomeBanco = 'dados';
-const nomeColecao = 'App';
+document.addEventListener('DOMContentLoaded', () => {
+    const formulario = document.querySelector('#itemForm');
+    const itemId = document.getElementById('itemID');
+    const itemNome = document.getElementById('itemNome');
+    const descricao = document.getElementById('itemDescricao');
+    const botao = document.getElementById('submitBotao');
+    const lista = document.getElementById('itemsLista');
 
-let db;
-const client = new MongoClient(uri, {
-    serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-    }
-});
+    const API_URL = '/api/items';
+    let editarId = null;
 
-async function run() {
-    try {
-        await client.connect();
-        db = client.db(nomeBanco);
-
-    } finally {
-        await client.close();
-    }
-}
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
-
-//API ADICIONAR
-app.post('/api/items', async (req, res) => {
-    try {
-        const { nome, descricao } = req.body;
-
-        if (!nome) {
-            return res.status(400).json({ message: 'O campo nome não foi preenchido' });
-        }
-        const novoItem = { nome, descricao: descricao || '', createdAt: new Date() };
-        const resultado = await db.collection(nomeColecao).insertOne(novoItem);
-        const inserirItem = await db.collection(nomeColecao).findOne({ _id: resultado.insertedId });
-        res.status(201).json(inserirItem);
-    } catch (error) {
-        console.error("Erro ao adicionar items:", error);
-        res.status(500).json({ message: 'Erro interno do servidor ao inserir dados' });
-    }
-});
-
-//API LEITURA
-app.get('/api/items', async (req, res) => {
-    if(!db){
-        return res.status(503).json({message:'Serviço indisponivel (Banco de Dados)'});
-    }
-    try {
-        const items = await db.collection(nomeColecao).find({}).sort({ createdAt: -1 }).toArray();
-        res.status(200).json(items);
-    } catch (error) {
-        console.error("Erro ao buscar os dados", error);
-        res.status(500).json({ message: "Erro interno do servidor ao buscar dados" });
-    }
-});
-
-//API ATUALIZAR 
-app.put('/api/items/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!ObjectId.isValid(id)) {
-            return res.status(400).json({ message: 'ID inválido' });
-        }
-        const { nome, descricao } = req.body;
-        if (!nome) {
-            return res.status(400).json({ message: 'O campo nome não foi preenchido' });
-        }
-        const atualizarDados = {
-            $set: {
-                nome, descricao: descricao || '', updatedAt: new Date()
+    async function renderizarDados() {
+        try {
+            const resposta = await fetch(API_URL);
+            if(!resposta.ok){
+                throw new Error(`Erro: ${resposta.status}`);
             }
-        };
-        const result = await db.collection(nomeColecao).findOneAndUpdate(
-            { _id: new ObjectId(id) },
-            atualizarDados,
-            { returnDocument: 'after' }
-        );
+            const items = await resposta.json();
 
-        if (!result || !result.value) {
-            return res.status(404).json({ message: 'Dado não encontrado para atualização' });
+            renderizar(items);
+
+        } catch (error) {
+            console.error('falha ao carregar os dados', error);
         }
-        res.status(200).json(result.value);
-    } catch (error) {
-        console.error("Erro ao atualizar os dados", error);
-        res.status(500).json({ message: "Erro interno do servidor ao atualizar os dados" });
     }
-});
 
-//API DELETAR
+    function renderizar(items) {
+        lista.innerHTML = '';
 
-app.delete('/api/items/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!ObjectId.isValid(id)) {
-            return res.status(400).json({ message: 'ID inválido' });
+        if (!items || items.length === 0) {
+            alert('Nenhum dado cadastrado.');
+        } else {
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.dataset.id = item._id;
+                const content = document.createElement('div');
+                content.classList.add('items');
+                content.innerHTML = `<strong>${item.nome}</strong>${item.descricao} ? '<p>${item.descricao}</p>' :'' `;
+                const acaoDiv = document.createElement('div');
+                acaoDiv.classList.add('acao');
+                const botaoEditar = document.createElement('button');
+                botaoEditar.textContent = 'Editar';
+                botaoEditar.classList.add('edit-btn');
+                botaoEditar.addEventListener('click', () => editarItem(item));
+                const botaoExcluir = document.createElement('button');
+                botaoExcluir.textContent = 'Excluir';
+                botaoExcluir.classList.add('excluir-btn');
+                botaoExcluir.addEventListener('click', () => excluirItem(item._id));
+                acaoDiv.appendChild(botaoEditar);
+                acaoDiv.appendChild(botaoExcluir);
+                li.appendChild(content);
+                li.appendChild(acaoDiv);
+                lista.appendChild(li);
+            });
         }
-
-        const result = await db.collection(nomeColecao).deleteOne({ _id: new ObjectId(id) });
-        if (result.deletedCount === 0) {
-            return res.status(404).json({ message: 'Dado não encotrado para ser deletado' });
-        }
-        res.status(200).json({message:"Item excluido com sucesso!"});
-    } catch (error) {
-        console.error("Erro ao deletar os dados", error);
-        res.status(500).json({ message: "Erro interno do servidor ao deletar os dados" });
     }
-});
 
-async function iniciarServidor() {
-    run().catch(console.dir);
-    
-    app.listen(port, ()=>{
-        console.log(`Servidor rodando em http:\\localhost:${port}`);
+    function editarItem(item) {
+        editarId = item._id;
+        itemId.value = item._id;
+        console.log(itemId.value);
+        console.log(editarId);
+        itemNome.value = item.nome;
+        descricao.value = item.descricao;
+        botao.textContent = 'Salvar alteração';
+        window.scrollTo(0, 0);
+    }
+
+    formulario.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const nome = itemNome.value.trim();
+        const itemDescricao = descricao.value.trim();
+        if (!nome) {
+            alert('Nome obrigatorio');
+            return;
+        }
+        const itemData = { nome, itemDescricao };
+
+        let url = API_URL;
+        let metodo = 'POST';
+
+        if (editarId) {
+            url = `${API_URL}/${editarId}`;        
+            metodo = 'PUT';
+        }
+
+        try {
+            const resposta = await fetch(url, {
+                method: metodo,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(itemData),
+
+            });
+
+            if (!resposta.ok) {
+                const erro = await resposta.json();
+                throw new Error(erro.message || `Erro ao salvar: ${resposta.status}`);
+            }
+
+            await renderizarDados();
+
+        } catch (error) {
+            console.error('Erro ao salvar os dados', error);
+        }
     });
-}
-iniciarServidor();
+
+    async function excluirDados(id) {
+        if (!confirm('Tem certeza que você quer excluir os dodos do usuário?')) {
+            return;
+        }
+
+        try {
+            const resposta = await fetch(`${API_URL}/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (!resposta.ok) {
+                const erro = await resposta.json();
+                throw new Error(erro.message || `Erro ao deletar: ${resposta.status}`);
+            }
+             await renderizarDados();
+        }catch(error){
+            console.error('Erro ao excluir os dados', error);
+        }
+
+    }
+
+renderizarDados() 
+});
